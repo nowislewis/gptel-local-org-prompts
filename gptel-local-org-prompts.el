@@ -23,7 +23,7 @@
   "Local org file prompts integration for gptel."
   :group 'gptel)
 
-(defcustom gptel-local-org-prompts-directory (expand-file-name "09-scripts/gptel-prompts/" nowis-doc-emacs-dir)
+(defcustom gptel-local-org-prompts-directory (expand-file-name "gptel-local-org-prompts/" user-emacs-directory)
   "Root directory to search recursively for .org prompt files."
   :type 'directory
   :group 'gptel-local-org-prompts)
