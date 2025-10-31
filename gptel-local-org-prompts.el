@@ -33,33 +33,41 @@
   :type 'integer
   :group 'gptel-local-org-prompts)
 
+
 (defun gptel-local-org-prompts--collect-candidates ()
-  "Return an alist of (label . full-content) for all .org files recursively."
+  "Return an alist of (label . full-content) for all .org files recursively, with two-column alignment."
   (let* ((files (directory-files-recursively
                  gptel-local-org-prompts-directory
                  "\\.org\\'"))
-         (root (file-name-as-directory (expand-file-name gptel-local-org-prompts-directory))))
-    (cl-loop for f in files
-             for rel = (file-relative-name f root)
-             for content = (with-temp-buffer
-                             (insert-file-contents f)
-                             (buffer-string))
-             for preview = (truncate-string-to-width
-                            (replace-regexp-in-string "\n" " " content)
-                            gptel-local-org-prompts-preview-length nil nil t)
-             collect (cons (concat rel ": " preview) content))))
+         (root (file-name-as-directory (expand-file-name gptel-local-org-prompts-directory)))
+         (entries
+          (cl-loop for f in files
+                   for rel = (file-relative-name f root)
+                   for content = (with-temp-buffer
+                                   (insert-file-contents f)
+                                   (buffer-string))
+                   for preview = (truncate-string-to-width
+                                  (replace-regexp-in-string "\n" " " content)
+                                  gptel-local-org-prompts-preview-length nil nil t)
+                   collect (list rel preview content)))
+         (max-width (cl-reduce #'max (mapcar (lambda (x) (string-width (car x))) entries) :initial-value 0)))
+    (cl-loop for (rel preview content) in entries
+             for label = (format (format "%%-%ds  %%s" max-width) rel preview)
+             collect (cons label content))))
 
 ;;;###autoload
 (defun gptel-choose-org-prompt ()
   "Interactively select a local org file's contents as the gptel system prompt."
   (interactive)
-  (let* ((candidates (gptel-local-org-prompts--collect-candidates))
-         (label (completing-read "Choose org prompt: " (mapcar #'car candidates) nil t)))
-    (when-let ((content (cdr (assoc label candidates))))
-      (gptel--set-with-scope 'gptel--system-message content gptel--set-buffer-locally)
-      (gptel--edit-directive 'gptel--system-message
-        :initial content
-        :callback (lambda (&rest _) (message "System prompt updated!"))))))
+  (let* ((candidates (gptel-local-org-prompts--collect-candidates)))
+    (if (null candidates)
+        (user-error "No org prompt files found in %s" gptel-local-org-prompts-directory)
+      (let ((label (completing-read "Choose org prompt: " (mapcar #'car candidates) nil t)))
+        (when-let ((content (cdr (assoc label candidates))))
+          (gptel--set-with-scope 'gptel--system-message content gptel--set-buffer-locally)
+          (gptel--edit-directive 'gptel--system-message
+            :initial content
+            :callback (lambda (&rest _) (message "System prompt updated!"))))))))
 
 (provide 'gptel-local-org-prompts)
 ;;; gptel-local-org-prompts.el ends here
