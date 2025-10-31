@@ -17,6 +17,7 @@
 
 (require 'cl-lib)
 (require 'gptel)
+(require 'gptel-transient)
 
 (defgroup gptel-local-org-prompts nil
   "Local org file prompts integration for gptel."
